@@ -12,9 +12,4 @@ export class ChatConfig {
     }
     return ChatConfig._instance
   }
-
-
-
-
-
 }

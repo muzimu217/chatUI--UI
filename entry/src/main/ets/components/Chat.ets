@@ -4,6 +4,7 @@ import inputMethod from '@ohos.inputMethod';
 import { ChatConfig, ChatRole } from '../common/ChatConfig'
 import { WelcomeCard } from './WelcomeCard'
 import { OptionCard } from './OptionCard'
+import { MorePanels } from './MorePanels'
 import font from '@ohos.font';
 import router from '@ohos.router';
 import { lvMarkdownIn } from '@luvi/lv-markdown-in'
@@ -53,17 +54,20 @@ struct Chat {
   public voiceIcon: Resource = $r('app.media.icon_voice')
   public cameraIcon: Resource = $r('app.media.icon_camera')
   public voice2Icon: Resource = $r('app.media.icon_voice2')
+  public keyboardIcon: Resource = $r("app.media.icon_keyboard")
   @State showSubmitButton: boolean = false
   @State title: string = "ChatBot"
   @State needTitleBar: boolean = true
-  public needVoiceButton:  boolean = true
+  public needClearChatButton: boolean = true
+  public needVoiceButtonControl: boolean = true
+  @State needVoiceButton:  boolean = false
   public welcomeCard: boolean = true
   public welcomeMessage: string = "主人好，我是智能助理，你的贴心小助手~"
   public photoIcontext:  string = "图片"
   public shootIcontext:  string = "拍摄"
   public voiceIcontext:  string = "语音输入"
   //自定义消息颜色
-  public botMessageBackgroundColor: ResourceColor = '#ffe3e2dc'
+  public botMessageBackgroundColor: ResourceColor = '#ffffffff'
   public botMessageTextColor: ResourceColor = Color.Black
   public userMessageBackgroundColor: ResourceColor = '#96ed6a'
   public userMessageTextColor: ResourceColor = Color.Black
@@ -124,32 +128,42 @@ struct Chat {
   defaultInputText() {
     Stack() {
        Column() {
-         TextInput({
-           placeholder: this.inputTextPlaceHolder,
-           text: this.userInput
-         })
-           .fontColor(this.inputTextColor)
-           .placeholderColor(this.inputTextPlaceHolderColor)
-           .layoutWeight(1)
-           .onChange((value: string) => {
-             console.info(value);
-             this.userInput = value;
-             // 判断输入是否为空
-             animateTo({
-               duration: 300,
-               curve: Curve.Linear
-             }, () => {
-               if (value.trim().length > 0) {
-                 this.showSubmitButton = true;
-               } else {
-                 this.showSubmitButton = false;
-               }
-             })
+         if (this.needVoiceButton){
+           Button("按住说话",{
+             type: ButtonType.Normal,
+           }).backgroundColor("#ffffffff")
+             .width("90%")
+             .margin({left: 0, right:40})
+             .borderRadius(2)
+             .fontColor("#ff1f1d1d")
+         } else {
+           TextInput({
+             placeholder: this.inputTextPlaceHolder,
+             text: this.userInput
+           })
+             .fontColor(this.inputTextColor)
+             .placeholderColor(this.inputTextPlaceHolderColor)
+             .layoutWeight(1)
+             .onChange((value: string) => {
+               console.info(value);
+               this.userInput = value;
+               // 判断输入是否为空
+               animateTo({
+                 duration: 300,
+                 curve: Curve.Linear
+               }, () => {
+                 if (value.trim().length > 0) {
+                   this.showSubmitButton = true;
+                 } else {
+                   this.showSubmitButton = false;
+                 }
+               })
 
-           })
-           .onSubmit((EnterKeyType) => {
-             this.submitUserInput(this.userInput)
-           })
+             })
+             .onSubmit((EnterKeyType) => {
+               this.submitUserInput(this.userInput)
+             })
+         }
 
 
          Column() {
@@ -167,9 +181,9 @@ struct Chat {
                this.submitUserInput(this.userInput)
              })
            } else  {
-             if (this.needVoiceButton) {
+             if ( this.needVoiceButtonControl) {
                Button() {
-                 Image(this.voice2Icon).width(28).height(28)
+                 Image(this.needVoiceButton ? this.keyboardIcon : this.voice2Icon  ).width(28).height(28)
                }
                .type(ButtonType.Circle)
                .backgroundColor('#0fff')
@@ -177,15 +191,17 @@ struct Chat {
                .height(39)
                .position({ bottom: 0, right: 0 })
                .onClick(() => {
-                 // animateTo({
-                 //   duration: 1000,
-                 //   curve: Curve.FastOutSlowIn
-                 // }, () => {
-                 // })
-                 console.log("Add button clicked")
+                 animateTo({
+                   duration: 300,
+                   curve: Curve.FastOutSlowIn
+                 }, () => {
+                   this.needVoiceButton  = !this.needVoiceButton;
+                 })
+                 console.log("语音键盘切换按钮被点击")
                })
              }
            }
+
          }
          .width(80)
          .height(50)
@@ -300,6 +316,7 @@ struct Chat {
                 .margin({ left: 10 })
                 .id('backBtn')
                 .onClick(() => {
+                  console.log("返回按钮被点击")
                   router.back()
                 })
                 .backgroundColor('#0fff')
@@ -324,25 +341,27 @@ struct Chat {
             })
 
             Row() {
-              Button() {
-                Image(this.clearChatIcon)
-                  .width(30)
-                  .height(30)
-              }
-              .alignRules({
-                center: { anchor: '__container__', align: VerticalAlign.Center },
-                right: { anchor: '__container__', align: HorizontalAlign.End }
-              })
-              .margin({ right: 10 })//this.clearBtnOffset
-              .id('clearBtn')
-              .onClick((evt) => {
-                if (this.onClear) {
-                  this.onClear(evt);
+              if (this.needClearChatButton) {
+                Button() {
+                  Image(this.clearChatIcon)
+                    .width(30)
+                    .height(30)
                 }
-                this.setDefaultMessage(ChatRole.Assistant, this.welcomeMessage)
-              })
-              .backgroundColor('#0fff')
-
+                .alignRules({
+                  center: { anchor: '__container__', align: VerticalAlign.Center },
+                  right: { anchor: '__container__', align: HorizontalAlign.End }
+                })
+                .margin({ right: 10 }) //this.clearBtnOffset
+                .id('clearBtn')
+                .onClick((evt) => {
+                  console.log("清除聊天按钮被点击")
+                  if (this.onClear) {
+                    this.onClear(evt);
+                  }
+                  this.setDefaultMessage(ChatRole.Assistant, this.welcomeMessage)
+                })
+                .backgroundColor('#0fff')
+              }
               if (this.MoreModelButton) {
                 Button() {
                   Image(this.MoreModelIcon)
@@ -356,6 +375,7 @@ struct Chat {
                 .margin({ right: 10 })
                 .id('moreBtn')
                 .onClick(() => {
+                  console.log("更多按钮被点击")
                   //添加按钮点击逻辑
                 })
                 .backgroundColor('#0fff')
@@ -522,22 +542,38 @@ struct Chat {
         })
 
         if (this.needInputControl) {
-          Flex() {
-            if (this.needVoice2Button) {
-              Button() {
-                Image(this.voice2Icon)
-                  .width(28)
-                  .height(28)
+          Stack() {
+            // 模糊背景层
+            Flex()
+              .width('100%')
+              .height(60)
+              .borderRadius(10)
+              .backgroundColor('rgba(255, 255, 255, 0.4)') // 半透明白色背景
+              .blur(10)
+              .border({ width: { bottom: 2, top: 2, left: 2, right: 2  }, color: '#e0e0e0' }) // 可选：增加底部边框提升层次感
+
+            Flex() {
+              if (this.needVoice2Button) {
+                Button() {
+                  Image(this.voice2Icon)
+                    .width(28)
+                    .height(28)
+                }
+                .backgroundColor('#00fcfcfc')
+                .width(60)
+                .height(39)
+                .alignRules({
+                  center: { anchor: '__container__', align: VerticalAlign.Center },
+                  left: { anchor: '__container__', align: HorizontalAlign.Start }
+                })
+                .onClick(() => {
+                  console.log("语音按钮被点击")
+                  // 添加点击逻辑
+                })
               }
-              .backgroundColor('#00fcfcfc')
-              .width(60)
-              .height(39)
-              .alignRules({
-                center: { anchor: '__container__', align: VerticalAlign.Center },
-                left: { anchor: '__container__', align: HorizontalAlign.Start }
-              })
-            }
+
               this.InputControl()
+
               if (this.needAddButton) {
                 Button() {
                   Image(this.AddButtonIcon).width(28).height(28)
@@ -552,75 +588,80 @@ struct Chat {
                   right: { anchor: '__container__', align: HorizontalAlign.End }
                 })
                 .onClick(() => {
+                  console.log("添加按钮被点击")
                   animateTo({
                     duration: 400,
                     curve: Curve.EaseInOut
                   }, () => {
                     this.isPanelShow = !this.isPanelShow
-                    // this.translateY = this.isPanelShow ? -50 : 0
                   })
-                  console.log("Add button clicked")
                 })
               }
+            }
+            .padding(10)
+            .width('100%')
+            .height(60)
           }
-          // .margin({ bottom: 10 })
-          // .borderWidth({ top: 1 })
-          // .borderColor('#ff515151')
-          .backgroundColor('#fff')
-          .padding(10)
-          .width('100%')
+          .width('95%')
           .height(60)
         }
 
 
 
         if (this.isPanelShow) {
-          Stack() {
-            Row() {
-              Column({ space: 5 }) {
-                Button() {
-                  Column() {
-                    Image($r('app.media.icon_photo')).width(40).height(40)
-                    Text(this.photoIcontext).fontSize(14).fontColor('#333')
-                  }
-                }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
-              }
-              .alignItems(HorizontalAlign.Center)
-
-              Column({ space: 5 }) {
-                Button() {
-                  Column() {
-                    Image($r('app.media.icon_camera')).width(40).height(40)
-                    Text(this.shootIcontext).fontSize(14).fontColor('#333')
-                  }
-                }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
-              }
-              .alignItems(HorizontalAlign.Center)
-
-              Column({ space: 5 }) {
-                Button() {
-                  Column() {
-                    Image($r('app.media.icon_voice')).width(40).height(40)
-                    Text(this.voiceIcontext).fontSize(14).fontColor('#333')
-                  }
-                }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
-
-              }
-              .alignItems(HorizontalAlign.Center)
-            }
-            .width('100%')
-            .justifyContent(FlexAlign.SpaceAround)
-            .backgroundColor('#fff')
-            .transition({
-              type: TransitionType.All,
-              opacity: this.panelOpacity,
-              translate: { y: this.panelTranslateY },
-              scale: { x: 1, y: 1 }
-            })
-          }
+          MorePanels({
+            shootIcontext: this.shootIcontext,
+            voiceIcontext: this.voiceIcontext,
+            photoIcontext: this.photoIcontext,
+            panelOpacity: this.panelOpacity,
+            panelTranslateY: this.panelTranslateY
+          })
+          // Stack() {
+          //   Row() {
+          //     Column({ space: 5 }) {
+          //       Button() {
+          //         Column() {
+          //           Image($r('app.media.icon_photo')).width(40).height(40)
+          //           Text(this.photoIcontext).fontSize(14).fontColor('#333')
+          //         }
+          //       }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
+          //     }
+          //     .alignItems(HorizontalAlign.Center)
+          //
+          //     Column({ space: 5 }) {
+          //       Button() {
+          //         Column() {
+          //           Image($r('app.media.icon_camera')).width(40).height(40)
+          //           Text(this.shootIcontext).fontSize(14).fontColor('#333')
+          //         }
+          //       }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
+          //     }
+          //     .alignItems(HorizontalAlign.Center)
+          //
+          //     Column({ space: 5 }) {
+          //       Button() {
+          //         Column() {
+          //           Image($r('app.media.icon_voice')).width(40).height(40)
+          //           Text(this.voiceIcontext).fontSize(14).fontColor('#333')
+          //         }
+          //       }.backgroundColor('#fff').type(ButtonType.Normal).size({ width: 80, height: 80 }).borderRadius(10)
+          //
+          //     }
+          //     .alignItems(HorizontalAlign.Center)
+          //   }
+          //   .width('100%')
+          //   .justifyContent(FlexAlign.SpaceAround)
+          //   .backgroundColor('#fff')
+          //   .transition({
+          //     type: TransitionType.All,
+          //     opacity: this.panelOpacity,
+          //     translate: { y: this.panelTranslateY },
+          //     scale: { x: 1, y: 1 }
+          //   })
+          // }
         }
       }
-      .backgroundColor('#fff')
+      .backgroundColor('#80dbd9d9')
       .height('100%')
       .width('100%')
     }
